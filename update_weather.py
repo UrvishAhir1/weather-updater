@@ -20,7 +20,7 @@ OUTPUT_CSV = "weather_daily.csv"
 
 # Fetch today's date
 # today = date.today().isoformat()
-today = "2025-07-11" 
+today = "2025-07-05" 
 rows = []
 
 for loc in LOCATIONS:
