@@ -107,7 +107,9 @@ def main():
 
     if records:
         df = pd.DataFrame(records)
-        filename = "weather_daily.csv"
+        today_str = datetime.now().strftime('%Y-%m-%d')
+        filename = f'weather_{today_str}.csv'
+        # filename = "weather_daily.csv"
         df.to_csv(filename, index=False)
         print(f"✅ Saved today's data to {filename}")
 
