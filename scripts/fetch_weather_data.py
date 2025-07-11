@@ -130,10 +130,15 @@ def upload_to_kaggle(csv_filename):
         json.dump(metadata, f, indent=2)
 
     print("📤 Uploading to Kaggle...")
+    # subprocess.run([
+    #     "kaggle", "datasets", "version",
+    #     "-p", ".", "-m", f"Daily update - {datetime.utcnow().strftime('%Y-%m-%d')}",
+    #     "--dir-mode", "zip"
+    # ], check=False)
     subprocess.run([
         "kaggle", "datasets", "version",
-        "-p", ".", "-m", f"Daily update - {datetime.utcnow().strftime('%Y-%m-%d')}",
-        "--dir-mode", "zip"
+        "--file", csv_filename,
+        "-m", f"Daily update - {datetime.utcnow().strftime('%Y-%m-%d')}"
     ], check=False)
 
 if __name__ == "__main__":
