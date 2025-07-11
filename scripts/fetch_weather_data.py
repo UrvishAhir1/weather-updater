@@ -1,15 +1,11 @@
-# scripts/fetch_weather_data.py
-
 import requests
 import pandas as pd
 import os
-from datetime import datetime
 import time
+from datetime import datetime
 import subprocess
-import sys
-import json
 
-# Major cities with their coordinates
+# Cities with coordinates and timezones
 CITIES = {
     'New York': {'lat': 40.7128, 'lon': -74.0060, 'timezone': 'America/New_York'},
     'London': {'lat': 51.5074, 'lon': -0.1278, 'timezone': 'Europe/London'},
@@ -33,111 +29,92 @@ CITIES = {
     'Bangkok': {'lat': 13.7563, 'lon': 100.5018, 'timezone': 'Asia/Bangkok'},
 }
 
-def fetch_today_weather(city_name, city_info, today):
+COUNTRIES = {
+    'New York': 'USA', 'London': 'UK', 'Tokyo': 'Japan', 'Sydney': 'Australia',
+    'Paris': 'France', 'Mumbai': 'India', 'Beijing': 'China', 'São Paulo': 'Brazil',
+    'Cairo': 'Egypt', 'Moscow': 'Russia', 'Los Angeles': 'USA', 'Dubai': 'UAE',
+    'Singapore': 'Singapore', 'Berlin': 'Germany', 'Toronto': 'Canada',
+    'Mexico City': 'Mexico', 'Buenos Aires': 'Argentina', 'Lagos': 'Nigeria',
+    'Istanbul': 'Turkey', 'Bangkok': 'Thailand'
+}
+
+def fetch_weather(city, info, today):
     url = "https://api.open-meteo.com/v1/forecast"
     params = {
-        'latitude': city_info['lat'],
-        'longitude': city_info['lon'],
-        'daily': [
-            'temperature_2m_max',
-            'temperature_2m_min',
-            'temperature_2m_mean',
-            'precipitation_sum',
-            'windspeed_10m_max',
-            'windgusts_10m_max',
-            'winddirection_10m_dominant',
-            'sunshine_duration',
-            'precipitation_probability_max',
-            'uv_index_max'
+        "latitude": info["lat"],
+        "longitude": info["lon"],
+        "daily": [
+            "temperature_2m_max", "temperature_2m_min", "temperature_2m_mean",
+            "precipitation_sum", "windspeed_10m_max", "windgusts_10m_max",
+            "winddirection_10m_dominant", "sunshine_duration",
+            "precipitation_probability_max", "uv_index_max"
         ],
-        'timezone': city_info['timezone'],
-        'start_date': today,
-        'end_date': today
+        "timezone": info["timezone"],
+        "start_date": today,
+        "end_date": today
     }
 
     try:
-        response = requests.get(url, params=params, timeout=30)
-        response.raise_for_status()
-        return response.json()
+        r = requests.get(url, params=params, timeout=15)
+        r.raise_for_status()
+        return r.json()
     except Exception as e:
-        print(f"Error fetching data for {city_name}: {e}")
+        print(f"❌ Error fetching data for {city}: {e}")
         return None
-
-def get_country(city_name):
-    mapping = {
-        'New York': 'USA', 'London': 'UK', 'Tokyo': 'Japan', 'Sydney': 'Australia',
-        'Paris': 'France', 'Mumbai': 'India', 'Beijing': 'China', 'São Paulo': 'Brazil',
-        'Cairo': 'Egypt', 'Moscow': 'Russia', 'Los Angeles': 'USA', 'Dubai': 'UAE',
-        'Singapore': 'Singapore', 'Berlin': 'Germany', 'Toronto': 'Canada',
-        'Mexico City': 'Mexico', 'Buenos Aires': 'Argentina', 'Lagos': 'Nigeria',
-        'Istanbul': 'Turkey', 'Bangkok': 'Thailand'
-    }
-    return mapping.get(city_name, 'Unknown')
 
 def main():
     today = datetime.utcnow().strftime('%Y-%m-%d')
-    print(f"📆 Fetching weather for: {today}")
-    records = []
+    today_filename = f"weather_{today}.csv"
+    all_data = []
+
+    print(f"📆 Fetching weather data for {today}...")
 
     for city, info in CITIES.items():
-        data = fetch_today_weather(city, info, today)
-        if data and 'daily' in data:
-            daily = data['daily']
-            record = {
-                'date': today,
-                'city': city,
-                'country': get_country(city),
-                'latitude': data.get('latitude', ''),
-                'longitude': data.get('longitude', ''),
-                'timezone': data.get('timezone', ''),
-                'temperature_max_c': daily['temperature_2m_max'][0],
-                'temperature_min_c': daily['temperature_2m_min'][0],
-                'temperature_mean_c': daily['temperature_2m_mean'][0],
-                'precipitation_mm': daily['precipitation_sum'][0],
-                'windspeed_max_kmh': daily['windspeed_10m_max'][0],
-                'windgust_max_kmh': daily['windgusts_10m_max'][0],
-                'wind_direction_degrees': daily['winddirection_10m_dominant'][0],
-                'sunshine_duration_hours': round(daily['sunshine_duration'][0] / 3600, 2),
-                'precipitation_probability_max': daily['precipitation_probability_max'][0],
-                'uv_index_max': daily['uv_index_max'][0],
-                'data_fetched_at': datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+        res = fetch_weather(city, info, today)
+        if not res or 'daily' not in res:
+            continue
+        daily = res['daily']
+        if not daily['temperature_2m_max']:
+            continue  # Skip if daily data is missing
+
+        try:
+            row = {
+                "date": today,
+                "city": city,
+                "country": COUNTRIES.get(city, "Unknown"),
+                "latitude": res.get("latitude"),
+                "longitude": res.get("longitude"),
+                "timezone": res.get("timezone"),
+                "temperature_max_c": daily["temperature_2m_max"][0],
+                "temperature_min_c": daily["temperature_2m_min"][0],
+                "temperature_mean_c": daily["temperature_2m_mean"][0],
+                "precipitation_mm": daily["precipitation_sum"][0],
+                "windspeed_max_kmh": daily["windspeed_10m_max"][0],
+                "windgust_max_kmh": daily["windgusts_10m_max"][0],
+                "wind_direction_degrees": daily["winddirection_10m_dominant"][0],
+                "sunshine_duration_hours": round(daily["sunshine_duration"][0] / 3600, 2) if daily["sunshine_duration"][0] else 0,
+                "precipitation_probability_max": daily["precipitation_probability_max"][0],
+                "uv_index_max": daily["uv_index_max"][0],
+                "data_fetched_at": datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
             }
-            records.append(record)
+            all_data.append(row)
+        except Exception as e:
+            print(f"⚠️ Error processing {city}: {e}")
         time.sleep(1)
 
-    if records:
-        df = pd.DataFrame(records)
-        today_str = datetime.now().strftime('%Y-%m-%d')
-        filename = f'weather_{today_str}.csv'
-        # filename = "weather_daily.csv"
-        df.to_csv(filename, index=False)
-        print(f"✅ Saved today's data to {filename}")
-
-        # Upload to Kaggle
-        upload_to_kaggle(filename)
+    if all_data:
+        df = pd.DataFrame(all_data)
+        df.to_csv(today_filename, index=False)
+        print(f"✅ Saved data to {today_filename}")
+        upload_to_kaggle(today_filename)
     else:
-        print("⚠️ No data collected today.")
+        print("⚠️ No data fetched.")
 
-def upload_to_kaggle(csv_filename):
-    dataset_slug = "global-weather-dataset-daily"
-    metadata = {
-        "title": "Global Weather Dataset - Daily",
-        "id": f"{os.environ['KAGGLE_USERNAME']}/{dataset_slug}",
-        "licenses": [{"name": "CC0-1.0"}],
-        "resources": [{"path": csv_filename, "description": "Daily global weather data"}]
-    }
-    with open('dataset-metadata.json', 'w') as f:
-        json.dump(metadata, f, indent=2)
-
-    print("📤 Uploading to Kaggle...")
-    # subprocess.run([
-    #     "kaggle", "datasets", "version",
-    #     "-p", ".", "-m", f"Daily update - {datetime.utcnow().strftime('%Y-%m-%d')}",
-    #     "--dir-mode", "zip"
-    # ], check=False)
+def upload_to_kaggle(csv_file):
+    print("📤 Uploading CSV to Kaggle...")
     subprocess.run([
         "kaggle", "datasets", "version",
-        "--file", csv_filename,
+        "--file", csv_file,
         "-m", f"Daily update - {datetime.utcnow().strftime('%Y-%m-%d')}"
     ], check=False)
 
