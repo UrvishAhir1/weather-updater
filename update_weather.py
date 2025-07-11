@@ -4,9 +4,16 @@ import pandas as pd
 from datetime import date
 
 # --- CONFIG ---
+# LOCATIONS = [
+#     {"city": "Mumbai",   "lat": 19.0760, "lon": 72.8777},
+#     {"city": "New York", "lat": 40.7128, "lon": -74.0060},
+# ]
+
 LOCATIONS = [
-    {"city": "Mumbai",   "lat": 19.0760, "lon": 72.8777},
+    {"city": "Mumbai", "lat": 19.0760, "lon": 72.8777},
     {"city": "New York", "lat": 40.7128, "lon": -74.0060},
+    {"city": "London", "lat": 51.5074, "lon": -0.1278},
+    {"city": "Tokyo", "lat": 35.6895, "lon": 139.6917},
 ]
 
 OUTPUT_CSV = "weather_daily.csv"
