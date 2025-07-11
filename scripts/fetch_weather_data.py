@@ -1,11 +1,13 @@
 # scripts/fetch_weather_data.py
+
 import requests
 import pandas as pd
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
 import time
 import subprocess
 import sys
+import json
 
 # Major cities with their coordinates
 CITIES = {
@@ -31,12 +33,7 @@ CITIES = {
     'Bangkok': {'lat': 13.7563, 'lon': 100.5018, 'timezone': 'Asia/Bangkok'},
 }
 
-def fetch_weather_data(city_name, city_info):
-    """Fetch weather data for a specific city from Open-Meteo API"""
-    # Get data for the last 7 days
-    end_date = datetime.now().date()
-    start_date = end_date - timedelta(days=7)
-    
+def fetch_today_weather(city_name, city_info, today):
     url = "https://api.open-meteo.com/v1/forecast"
     params = {
         'latitude': city_info['lat'],
@@ -54,173 +51,88 @@ def fetch_weather_data(city_name, city_info):
             'uv_index_max'
         ],
         'timezone': city_info['timezone'],
-        'start_date': start_date.strftime('%Y-%m-%d'),
-        'end_date': end_date.strftime('%Y-%m-%d'),
-        'past_days': 7
+        'start_date': today,
+        'end_date': today
     }
-    
+
     try:
         response = requests.get(url, params=params, timeout=30)
         response.raise_for_status()
         return response.json()
-    except requests.RequestException as e:
+    except Exception as e:
         print(f"Error fetching data for {city_name}: {e}")
         return None
 
-def process_weather_data(weather_data, city_name):
-    """Process weather data into a structured format"""
-    if not weather_data or 'daily' not in weather_data:
-        return []
-    
-    daily_data = weather_data['daily']
-    dates = daily_data['time']
-    
-    records = []
-    for i, date in enumerate(dates):
-        record = {
-            'date': date,
-            'city': city_name,
-            'country': get_country_from_city(city_name),
-            'latitude': weather_data.get('latitude', 0),
-            'longitude': weather_data.get('longitude', 0),
-            'timezone': weather_data.get('timezone', ''),
-            'temperature_max_c': daily_data.get('temperature_2m_max', [None])[i],
-            'temperature_min_c': daily_data.get('temperature_2m_min', [None])[i],
-            'temperature_mean_c': daily_data.get('temperature_2m_mean', [None])[i],
-            'precipitation_mm': daily_data.get('precipitation_sum', [None])[i],
-            'windspeed_max_kmh': daily_data.get('windspeed_10m_max', [None])[i],
-            'windgust_max_kmh': daily_data.get('windgusts_10m_max', [None])[i],
-            'wind_direction_degrees': daily_data.get('winddirection_10m_dominant', [None])[i],
-            'sunshine_duration_hours': daily_data.get('sunshine_duration', [None])[i],
-            'precipitation_probability_max': daily_data.get('precipitation_probability_max', [None])[i],
-            'uv_index_max': daily_data.get('uv_index_max', [None])[i],
-            'data_fetched_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        }
-        
-        # Convert sunshine duration from seconds to hours
-        if record['sunshine_duration_hours'] is not None:
-            record['sunshine_duration_hours'] = round(record['sunshine_duration_hours'] / 3600, 2)
-        
-        records.append(record)
-    
-    return records
-
-def get_country_from_city(city_name):
-    """Map city names to countries"""
-    country_mapping = {
-        'New York': 'United States',
-        'Los Angeles': 'United States',
-        'London': 'United Kingdom',
-        'Tokyo': 'Japan',
-        'Sydney': 'Australia',
-        'Paris': 'France',
-        'Mumbai': 'India',
-        'Beijing': 'China',
-        'São Paulo': 'Brazil',
-        'Cairo': 'Egypt',
-        'Moscow': 'Russia',
-        'Dubai': 'United Arab Emirates',
-        'Singapore': 'Singapore',
-        'Berlin': 'Germany',
-        'Toronto': 'Canada',
-        'Mexico City': 'Mexico',
-        'Buenos Aires': 'Argentina',
-        'Lagos': 'Nigeria',
-        'Istanbul': 'Turkey',
-        'Bangkok': 'Thailand',
+def get_country(city_name):
+    mapping = {
+        'New York': 'USA', 'London': 'UK', 'Tokyo': 'Japan', 'Sydney': 'Australia',
+        'Paris': 'France', 'Mumbai': 'India', 'Beijing': 'China', 'São Paulo': 'Brazil',
+        'Cairo': 'Egypt', 'Moscow': 'Russia', 'Los Angeles': 'USA', 'Dubai': 'UAE',
+        'Singapore': 'Singapore', 'Berlin': 'Germany', 'Toronto': 'Canada',
+        'Mexico City': 'Mexico', 'Buenos Aires': 'Argentina', 'Lagos': 'Nigeria',
+        'Istanbul': 'Turkey', 'Bangkok': 'Thailand'
     }
-    return country_mapping.get(city_name, 'Unknown')
-
-def upload_to_kaggle(csv_file_path, dataset_slug):
-    """Upload the CSV file to Kaggle dataset"""
-    try:
-        # Create dataset metadata
-        metadata = {
-            "title": "Global Weather Dataset - Daily",
-            "id": f"{os.environ.get('KAGGLE_USERNAME')}/{dataset_slug}",
-            "licenses": [{"name": "CC0-1.0"}],
-            "resources": [{
-                "path": csv_file_path,
-                "description": "Daily weather data for major cities worldwide, updated automatically"
-            }]
-        }
-        
-        # Create dataset-metadata.json
-        import json
-        with open('dataset-metadata.json', 'w') as f:
-            json.dump(metadata, f, indent=2)
-        
-        # Upload to Kaggle
-        print("Uploading to Kaggle...")
-        result = subprocess.run([
-            'kaggle', 'datasets', 'version', 
-            '-p', '.', 
-            '-m', f'Automated update - {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}'
-        ], capture_output=True, text=True)
-        
-        if result.returncode == 0:
-            print("Successfully uploaded to Kaggle!")
-            print(result.stdout)
-        else:
-            print(f"Error uploading to Kaggle: {result.stderr}")
-            # Try creating new dataset if version update fails
-            print("Attempting to create new dataset...")
-            create_result = subprocess.run([
-                'kaggle', 'datasets', 'create', 
-                '-p', '.', 
-                '--dir-mode', 'zip'
-            ], capture_output=True, text=True)
-            
-            if create_result.returncode == 0:
-                print("Successfully created new dataset on Kaggle!")
-                print(create_result.stdout)
-            else:
-                print(f"Error creating dataset: {create_result.stderr}")
-                
-    except Exception as e:
-        print(f"Error uploading to Kaggle: {e}")
+    return mapping.get(city_name, 'Unknown')
 
 def main():
-    """Main function to fetch weather data and upload to Kaggle"""
-    print("Starting weather data collection...")
-    
-    all_records = []
-    
-    for city_name, city_info in CITIES.items():
-        print(f"Fetching weather data for {city_name}...")
-        weather_data = fetch_weather_data(city_name, city_info)
-        
-        if weather_data:
-            records = process_weather_data(weather_data, city_name)
-            all_records.extend(records)
-            print(f"Successfully processed {len(records)} records for {city_name}")
-        else:
-            print(f"Failed to fetch data for {city_name}")
-        
-        # Add delay to be respectful to the API
+    today = datetime.utcnow().strftime('%Y-%m-%d')
+    print(f"📆 Fetching weather for: {today}")
+    records = []
+
+    for city, info in CITIES.items():
+        data = fetch_today_weather(city, info, today)
+        if data and 'daily' in data:
+            daily = data['daily']
+            record = {
+                'date': today,
+                'city': city,
+                'country': get_country(city),
+                'latitude': data.get('latitude', ''),
+                'longitude': data.get('longitude', ''),
+                'timezone': data.get('timezone', ''),
+                'temperature_max_c': daily['temperature_2m_max'][0],
+                'temperature_min_c': daily['temperature_2m_min'][0],
+                'temperature_mean_c': daily['temperature_2m_mean'][0],
+                'precipitation_mm': daily['precipitation_sum'][0],
+                'windspeed_max_kmh': daily['windspeed_10m_max'][0],
+                'windgust_max_kmh': daily['windgusts_10m_max'][0],
+                'wind_direction_degrees': daily['winddirection_10m_dominant'][0],
+                'sunshine_duration_hours': round(daily['sunshine_duration'][0] / 3600, 2),
+                'precipitation_probability_max': daily['precipitation_probability_max'][0],
+                'uv_index_max': daily['uv_index_max'][0],
+                'data_fetched_at': datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+            }
+            records.append(record)
         time.sleep(1)
-    
-    if all_records:
-        # Create DataFrame and save to CSV
-        df = pd.DataFrame(all_records)
-        
-        # Sort by date and city
-        df = df.sort_values(['date', 'city'])
-        
-        # Save to CSV
-        csv_filename = 'weather_daily.csv'
-        df.to_csv(csv_filename, index=False)
-        
-        print(f"Successfully created {csv_filename} with {len(df)} records")
-        print(f"Date range: {df['date'].min()} to {df['date'].max()}")
-        print(f"Cities included: {df['city'].nunique()}")
-        
+
+    if records:
+        df = pd.DataFrame(records)
+        filename = "weather_daily.csv"
+        df.to_csv(filename, index=False)
+        print(f"✅ Saved today's data to {filename}")
+
         # Upload to Kaggle
-        upload_to_kaggle(csv_filename, 'global-weather-dataset-daily')
-        
+        upload_to_kaggle(filename)
     else:
-        print("No weather data collected!")
-        sys.exit(1)
+        print("⚠️ No data collected today.")
+
+def upload_to_kaggle(csv_filename):
+    dataset_slug = "global-weather-dataset-daily"
+    metadata = {
+        "title": "Global Weather Dataset - Daily",
+        "id": f"{os.environ['KAGGLE_USERNAME']}/{dataset_slug}",
+        "licenses": [{"name": "CC0-1.0"}],
+        "resources": [{"path": csv_filename, "description": "Daily global weather data"}]
+    }
+    with open('dataset-metadata.json', 'w') as f:
+        json.dump(metadata, f, indent=2)
+
+    print("📤 Uploading to Kaggle...")
+    subprocess.run([
+        "kaggle", "datasets", "version",
+        "-p", ".", "-m", f"Daily update - {datetime.utcnow().strftime('%Y-%m-%d')}",
+        "--dir-mode", "zip"
+    ], check=False)
 
 if __name__ == "__main__":
     main()
