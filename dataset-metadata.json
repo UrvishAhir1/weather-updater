@@ -2,13 +2,6 @@
   "title": "Global Weather Dataset - Daily",
   "id": "urvishahir/global-weather-dataset-daily",
   "licenses": [
-    {
-      "name": "CC0-1.0"
-    }
-  ],
-  "resources": [
-    {
-      "path": "."
-    }
+    { "name": "CC0-1.0" }
   ]
 }
