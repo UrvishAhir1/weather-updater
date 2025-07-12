@@ -108,12 +108,12 @@ def main():
     else:
         print("⚠️ No data fetched.")
 
-def upload_to_kaggle():
-    print("📤 Uploading to Kaggle…")
+def upload_to_kaggle(csv_file):
+    print("📤 Uploading CSV to Kaggle…")
+
     result = subprocess.run([
         "kaggle", "datasets", "version",
-        "-p", ".",
-        "--dir-mode", "zip",
+        "-p", ".",  # Use root directory so .kaggleignore works
         "-m", f"Daily update - {datetime.utcnow().strftime('%Y-%m-%d')}"
     ], capture_output=True, text=True)
 
