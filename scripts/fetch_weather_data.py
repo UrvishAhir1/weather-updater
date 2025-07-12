@@ -94,18 +94,18 @@ def main():
 def upload_to_kaggle(csv_file):
     print("📤 Uploading CSV to Kaggle...")
 
-    # Confirm files exist
+    # safety checks
     if not os.path.exists(csv_file):
         print(f"❌ CSV file '{csv_file}' not found.")
         return
     if not os.path.exists("dataset-metadata.json"):
-        print(f"❌ 'dataset-metadata.json' not found in repo root.")
+        print("❌ dataset-metadata.json not found in the repo root.")
         return
 
-    # Use current working directory (assumes both files exist here)
+    # version the entire directory as a zip
     result = subprocess.run([
         "kaggle", "datasets", "version",
-        "-p", ".",  # Use current directory
+        "-p", ".", 
         "--dir-mode", "zip",
         "-m", f"Daily update - {datetime.utcnow().strftime('%Y-%m-%d')}"
     ], capture_output=True, text=True)
