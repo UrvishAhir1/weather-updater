@@ -2,9 +2,7 @@ import requests
 import pandas as pd
 import os
 import time
-import json
 import shutil
-import tempfile
 from datetime import datetime
 import subprocess
 
@@ -95,8 +93,12 @@ def main():
 def upload_to_kaggle(csv_file):
     print("📤 Uploading CSV to Kaggle...")
 
-    upload_dir = tempfile.mkdtemp()
-    shutil.copy(csv_file, upload_dir)
+    # Make stable upload directory
+    upload_dir = "kaggle_upload"
+    os.makedirs(upload_dir, exist_ok=True)
+
+    # Copy CSV and metadata
+    shutil.copy(csv_file, os.path.join(upload_dir, csv_file))
     shutil.copy("dataset-metadata.json", os.path.join(upload_dir, "dataset-metadata.json"))
 
     result = subprocess.run([
