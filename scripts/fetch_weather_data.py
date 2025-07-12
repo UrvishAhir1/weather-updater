@@ -55,7 +55,7 @@ def main():
         if not res or 'daily' not in res:
             continue
         daily = res['daily']
-        if not daily['temperature_2m_max']:
+        if not daily["temperature_2m_max"]:
             continue
 
         try:
@@ -73,7 +73,8 @@ def main():
                 "windspeed_max_kmh": daily["windspeed_10m_max"][0],
                 "windgust_max_kmh": daily["windgusts_10m_max"][0],
                 "wind_direction_degrees": daily["winddirection_10m_dominant"][0],
-                "sunshine_duration_hours": round(daily["sunshine_duration"][0] / 3600, 2) if daily["sunshine_duration"][0] else 0,
+                "sunshine_duration_hours": round(daily["sunshine_duration"][0] / 3600, 2)
+                    if daily["sunshine_duration"][0] else 0,
                 "precipitation_probability_max": daily["precipitation_probability_max"][0],
                 "uv_index_max": daily["uv_index_max"][0],
                 "data_fetched_at": datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
@@ -94,19 +95,22 @@ def main():
 def upload_to_kaggle(csv_file):
     print("📤 Uploading CSV to Kaggle...")
 
-    # Copy CSV and static JSON metadata to a temp folder
     upload_dir = tempfile.mkdtemp()
     shutil.copy(csv_file, upload_dir)
     shutil.copy("dataset-metadata.json", os.path.join(upload_dir, "dataset-metadata.json"))
 
-    subprocess.run([
+    result = subprocess.run([
         "kaggle", "datasets", "version",
         "-p", upload_dir,
         "--dir-mode", "zip",
         "-m", f"Daily update - {datetime.utcnow().strftime('%Y-%m-%d')}"
-    ], check=False)
+    ], capture_output=True, text=True)
 
-    print("✅ Upload completed.")
+    print("📤 Kaggle CLI stdout:\n", result.stdout)
+    if result.returncode != 0:
+        print("❌ Kaggle CLI stderr:\n", result.stderr)
+    else:
+        print("✅ Upload completed.")
 
 if __name__ == "__main__":
     main()
