@@ -108,7 +108,8 @@ def main():
         df = pd.DataFrame(all_data)
         df.to_csv(filename, index=False)
         print(f"✅ Saved data to {filename}")
-        upload_to_kaggle()
+        # upload_to_kaggle()
+        def upload_to_kaggle(csv_file):
     else:
         print("⚠️ No data fetched.")
 
