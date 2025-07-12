@@ -3,3 +3,6 @@
 # But include daily CSVs and metadata
 !weather_*.csv
 !dataset-metadata.json
+
+# Exclude this file itself
+.kaggleignore
