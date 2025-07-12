@@ -117,14 +117,17 @@ def upload_to_kaggle(csv_file):
     #     "--file", csv_file,
     #     "-m", f"Daily update - {datetime.utcnow().strftime('%Y-%m-%d')}"
     # ], check=False)
-
+    # subprocess.run([
+    #     "kaggle", "datasets", "version",
+    #     "-p", ".", 
+    #     "--dir-mode", "zip",
+    #     "-m", f"Daily update - {datetime.utcnow().strftime('%Y-%m-%d')}"
+    # ], check=False)
     subprocess.run([
         "kaggle", "datasets", "version",
-        "-p", ".", 
-        "--dir-mode", "zip",
-        "-m", f"Daily update - {datetime.utcnow().strftime('%Y-%m-%d')}"
+        "-p", ".", "-m", f"Daily update - {datetime.utcnow().strftime('%Y-%m-%d')}",
+        "--dir-mode", "zip"
     ], check=False)
-
 
 if __name__ == "__main__":
     main()
