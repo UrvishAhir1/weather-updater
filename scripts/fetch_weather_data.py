@@ -94,19 +94,18 @@ def main():
 def upload_to_kaggle(csv_file):
     print("📤 Uploading CSV to Kaggle...")
 
-    upload_dir = tempfile.mkdtemp(prefix="kaggle_upload_")
-    metadata_path = "dataset-metadata.json"
-
-    if not os.path.exists(metadata_path):
-        print(f"❌ '{metadata_path}' not found in the repository root.")
+    # Confirm files exist
+    if not os.path.exists(csv_file):
+        print(f"❌ CSV file '{csv_file}' not found.")
+        return
+    if not os.path.exists("dataset-metadata.json"):
+        print(f"❌ 'dataset-metadata.json' not found in repo root.")
         return
 
-    shutil.copy(csv_file, os.path.join(upload_dir, csv_file))
-    shutil.copy(metadata_path, os.path.join(upload_dir, "dataset-metadata.json"))
-
+    # Use current working directory (assumes both files exist here)
     result = subprocess.run([
         "kaggle", "datasets", "version",
-        "-p", upload_dir,
+        "-p", ".",  # Use current directory
         "--dir-mode", "zip",
         "-m", f"Daily update - {datetime.utcnow().strftime('%Y-%m-%d')}"
     ], capture_output=True, text=True)
