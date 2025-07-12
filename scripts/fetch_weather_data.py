@@ -93,13 +93,12 @@ def main():
 def upload_to_kaggle(csv_file):
     print("📤 Uploading CSV to Kaggle...")
 
-    # Make stable upload directory
-    upload_dir = "kaggle_upload"
-    os.makedirs(upload_dir, exist_ok=True)
+    upload_dir = tempfile.mkdtemp()
+    shutil.copy(csv_file, upload_dir)
 
-    # Copy CSV and metadata
-    shutil.copy(csv_file, os.path.join(upload_dir, csv_file))
-    shutil.copy("dataset-metadata.json", os.path.join(upload_dir, "dataset-metadata.json"))
+    # Correct path to metadata file
+    metadata_path = os.path.join(os.path.dirname(__file__), '..', 'dataset-metadata.json')
+    shutil.copy(metadata_path, os.path.join(upload_dir, "dataset-metadata.json"))
 
     result = subprocess.run([
         "kaggle", "datasets", "version",
@@ -109,10 +108,8 @@ def upload_to_kaggle(csv_file):
     ], capture_output=True, text=True)
 
     print("📤 Kaggle CLI stdout:\n", result.stdout)
-    if result.returncode != 0:
+    if result.stderr:
         print("❌ Kaggle CLI stderr:\n", result.stderr)
-    else:
-        print("✅ Upload completed.")
 
 if __name__ == "__main__":
     main()
