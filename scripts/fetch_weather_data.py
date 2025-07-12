@@ -1,42 +1,43 @@
 import requests
 import pandas as pd
 import time
-import sys
-from datetime import datetime
 import subprocess
+from datetime import datetime
 
 # Cities with coordinates and timezones
 CITIES = {
-    'New York': {'lat': 40.7128, 'lon': -74.0060, 'timezone': 'America/New_York'},
-    'London': {'lat': 51.5074, 'lon': -0.1278, 'timezone': 'Europe/London'},
-    'Tokyo': {'lat': 35.6762, 'lon': 139.6503, 'timezone': 'Asia/Tokyo'},
-    'Sydney': {'lat': -33.8688, 'lon': 151.2093, 'timezone': 'Australia/Sydney'},
-    'Paris': {'lat': 48.8566, 'lon': 2.3522, 'timezone': 'Europe/Paris'},
-    'Mumbai': {'lat': 19.0760, 'lon': 72.8777, 'timezone': 'Asia/Kolkata'},
-    'Beijing': {'lat': 39.9042, 'lon': 116.4074, 'timezone': 'Asia/Shanghai'},
-    'São Paulo': {'lat': -23.5558, 'lon': -46.6396, 'timezone': 'America/Sao_Paulo'},
-    'Cairo': {'lat': 30.0444, 'lon': 31.2357, 'timezone': 'Africa/Cairo'},
-    'Moscow': {'lat': 55.7558, 'lon': 37.6173, 'timezone': 'Europe/Moscow'},
-    'Los Angeles': {'lat': 34.0522, 'lon': -118.2437, 'timezone': 'America/Los_Angeles'},
-    'Dubai': {'lat': 25.2048, 'lon': 55.2708, 'timezone': 'Asia/Dubai'},
-    'Singapore': {'lat': 1.3521, 'lon': 103.8198, 'timezone': 'Asia/Singapore'},
-    'Berlin': {'lat': 52.5200, 'lon': 13.4050, 'timezone': 'Europe/Berlin'},
-    'Toronto': {'lat': 43.6532, 'lon': -79.3832, 'timezone': 'America/Toronto'},
-    'Mexico City': {'lat': 19.4326, 'lon': -99.1332, 'timezone': 'America/Mexico_City'},
-    'Buenos Aires': {'lat': -34.6118, 'lon': -58.3960, 'timezone': 'America/Argentina/Buenos_Aires'},
-    'Lagos': {'lat': 6.5244, 'lon': 3.3792, 'timezone': 'Africa/Lagos'},
-    'Istanbul': {'lat': 41.0082, 'lon': 28.9784, 'timezone': 'Europe/Istanbul'},
-    'Bangkok': {'lat': 13.7563, 'lon': 100.5018, 'timezone': 'Asia/Bangkok'}
+    "New York": {"lat": 40.7128, "lon": -74.0060, "timezone": "America/New_York"},
+    "London": {"lat": 51.5074, "lon": -0.1278, "timezone": "Europe/London"},
+    "Tokyo": {"lat": 35.6762, "lon": 139.6503, "timezone": "Asia/Tokyo"},
+    "Delhi": {"lat": 28.6139, "lon": 77.2090, "timezone": "Asia/Kolkata"},
+    "Paris": {"lat": 48.8566, "lon": 2.3522, "timezone": "Europe/Paris"},
+    "Sydney": {"lat": -33.8688, "lon": 151.2093, "timezone": "Australia/Sydney"},
+    "Moscow": {"lat": 55.7558, "lon": 37.6173, "timezone": "Europe/Moscow"},
+    "Mumbai": {"lat": 19.0760, "lon": 72.8777, "timezone": "Asia/Kolkata"},
+    "Beijing": {"lat": 39.9042, "lon": 116.4074, "timezone": "Asia/Shanghai"},
+    "São Paulo": {"lat": -23.5505, "lon": -46.6333, "timezone": "America/Sao_Paulo"},
+    "Los Angeles": {"lat": 34.0522, "lon": -118.2437, "timezone": "America/Los_Angeles"},
+    "Cairo": {"lat": 30.0444, "lon": 31.2357, "timezone": "Africa/Cairo"},
+    "Istanbul": {"lat": 41.0082, "lon": 28.9784, "timezone": "Europe/Istanbul"},
+    "Mexico City": {"lat": 19.4326, "lon": -99.1332, "timezone": "America/Mexico_City"},
+    "Seoul": {"lat": 37.5665, "lon": 126.9780, "timezone": "Asia/Seoul"},
+    "Berlin": {"lat": 52.5200, "lon": 13.4050, "timezone": "Europe/Berlin"},
+    "Bangkok": {"lat": 13.7563, "lon": 100.5018, "timezone": "Asia/Bangkok"},
+    "Lagos": {"lat": 6.5244, "lon": 3.3792, "timezone": "Africa/Lagos"},
+    "Buenos Aires": {"lat": -34.6037, "lon": -58.3816, "timezone": "America/Argentina/Buenos_Aires"},
+    "Singapore": {"lat": 1.3521, "lon": 103.8198, "timezone": "Asia/Singapore"},
+    "Toronto": {"lat": 43.651070, "lon": -79.347015, "timezone": "America/Toronto"},
 }
 
 COUNTRIES = {
-    city: country for city, country in zip(CITIES.keys(), [
-        'USA', 'UK', 'Japan', 'Australia', 'France', 'India', 'China', 'Brazil', 'Egypt', 'Russia',
-        'USA', 'UAE', 'Singapore', 'Germany', 'Canada', 'Mexico', 'Argentina', 'Nigeria', 'Turkey', 'Thailand'
-    ])
+    "New York": "USA", "London": "UK", "Tokyo": "Japan", "Delhi": "India", "Paris": "France", "Sydney": "Australia",
+    "Moscow": "Russia", "Mumbai": "India", "Beijing": "China", "São Paulo": "Brazil", "Los Angeles": "USA",
+    "Cairo": "Egypt", "Istanbul": "Turkey", "Mexico City": "Mexico", "Seoul": "South Korea", "Berlin": "Germany",
+    "Bangkok": "Thailand", "Lagos": "Nigeria", "Buenos Aires": "Argentina", "Singapore": "Singapore",
+    "Toronto": "Canada"
 }
 
-def fetch_weather(city, info, today, retries=3, delay=2):
+def fetch_weather(city, info, today):
     url = "https://api.open-meteo.com/v1/forecast"
     params = {
         "latitude": info["lat"],
@@ -52,36 +53,31 @@ def fetch_weather(city, info, today, retries=3, delay=2):
         "end_date": today
     }
 
-    for attempt in range(1, retries + 1):
+    for attempt in range(1, 4):  # Retry 3 times max
         try:
-            r = requests.get(url, params=params, timeout=15)
+            r = requests.get(url, params=params, timeout=25)
             r.raise_for_status()
             return r.json()
         except Exception as e:
-            print(f"❌ Error fetching {city} (attempt {attempt}/{retries}): {e}")
-            if attempt < retries:
-                time.sleep(delay)
-            else:
-                return None
+            print(f"❌ Error fetching {city} (attempt {attempt}/3): {e}")
+            time.sleep(3)  # Delay before retry
+    return None
 
 def main():
-    date_str = sys.argv[1] if len(sys.argv) > 1 else datetime.utcnow().strftime('%Y-%m-%d')
-    filename = f"weather_{date_str}.csv"
+    today = datetime.utcnow().strftime('%Y-%m-%d')
+    today_filename = f"weather_{today}.csv"
     all_data = []
 
-    print(f"📆 Fetching weather data for {date_str}...")
+    print(f"📆 Fetching weather data for {today}...")
 
     for city, info in CITIES.items():
-        res = fetch_weather(city, info, date_str)
-        if not res or 'daily' not in res:
+        res = fetch_weather(city, info, today)
+        if not res or 'daily' not in res or not res['daily']['temperature_2m_max']:
             continue
         daily = res['daily']
-        if not daily['temperature_2m_max']:
-            continue
-
         try:
             row = {
-                "date": date_str,
+                "date": today,
                 "city": city,
                 "country": COUNTRIES.get(city, "Unknown"),
                 "latitude": res.get("latitude"),
@@ -102,23 +98,23 @@ def main():
             all_data.append(row)
         except Exception as e:
             print(f"⚠️ Error processing {city}: {e}")
-        time.sleep(1)
+        time.sleep(2)  # Delay between each city to avoid rate-limits
 
     if all_data:
         df = pd.DataFrame(all_data)
-        df.to_csv(filename, index=False)
-        print(f"✅ Saved data to {filename}")
-        # upload_to_kaggle()
-        def upload_to_kaggle(csv_file):
+        df.to_csv(today_filename, index=False)
+        print(f"✅ Saved data to {today_filename}")
+        upload_to_kaggle(today_filename)
+        print(f"📊 Stored rows: {len(all_data)}")
     else:
         print("⚠️ No data fetched.")
 
 def upload_to_kaggle(csv_file):
-    print("📤 Uploading CSV to Kaggle…")
+    print("📤 Uploading to Kaggle…")
 
     result = subprocess.run([
         "kaggle", "datasets", "version",
-        "-p", ".",  # Use root directory so .kaggleignore works
+        "-p", ".",  # Use current directory
         "-m", f"Daily update - {datetime.utcnow().strftime('%Y-%m-%d')}"
     ], capture_output=True, text=True)
 
