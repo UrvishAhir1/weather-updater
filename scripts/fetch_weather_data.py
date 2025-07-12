@@ -96,8 +96,7 @@ def upload_to_kaggle(csv_file):
 
     result = subprocess.run([
         "kaggle", "datasets", "version",
-        "-p", ".",
-        "--dir-mode", "zip",
+        "-p", ".",  # Upload from current directory
         "-m", f"Daily update - {datetime.utcnow().strftime('%Y-%m-%d')}"
     ], capture_output=True, text=True)
 
