@@ -36,7 +36,7 @@ COUNTRIES = {
     ])
 }
 
-def fetch_weather(city, info, date_str):
+def fetch_weather(city, info, today, retries=3, delay=2):
     url = "https://api.open-meteo.com/v1/forecast"
     params = {
         "latitude": info["lat"],
@@ -48,17 +48,21 @@ def fetch_weather(city, info, date_str):
             "precipitation_probability_max", "uv_index_max"
         ],
         "timezone": info["timezone"],
-        "start_date": date_str,
-        "end_date": date_str
+        "start_date": today,
+        "end_date": today
     }
 
-    try:
-        r = requests.get(url, params=params, timeout=15)
-        r.raise_for_status()
-        return r.json()
-    except Exception as e:
-        print(f"❌ Error fetching data for {city}: {e}")
-        return None
+    for attempt in range(1, retries + 1):
+        try:
+            r = requests.get(url, params=params, timeout=15)
+            r.raise_for_status()
+            return r.json()
+        except Exception as e:
+            print(f"❌ Error fetching {city} (attempt {attempt}/{retries}): {e}")
+            if attempt < retries:
+                time.sleep(delay)
+            else:
+                return None
 
 def main():
     date_str = sys.argv[1] if len(sys.argv) > 1 else datetime.utcnow().strftime('%Y-%m-%d')
