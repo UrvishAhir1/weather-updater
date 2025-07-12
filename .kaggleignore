@@ -1,8 +1,3 @@
-# Ignore all files…
 *
-
-# …but include only our daily CSV(s)
 !weather_*.csv
-
-# …and still include the metadata JSON
 !dataset-metadata.json
